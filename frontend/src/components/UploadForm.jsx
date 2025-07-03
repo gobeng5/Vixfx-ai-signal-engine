@@ -1,36 +1,32 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-export default function UploadForm() {
+export default function UploadForm({ onSignal }) {
   const [image, setImage] = useState(null);
-  const [signal, setSignal] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = new FormData();
     form.append('screenshot', image);
+    setLoading(true);
 
     try {
       const res = await axios.post('http://localhost:5000/api/upload', form);
-      setSignal(res.data.data);
+      onSignal(res.data.data);
     } catch (err) {
       console.error('Upload failed:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <form onSubmit={handleSubmit}>
-        <input type="file" onChange={e => setImage(e.target.files[0])} />
-        <button type="submit">Analyze Screenshot</button>
-      </form>
-
-      {signal && (
-        <div style={{ marginTop: '1rem' }}>
-          <h3>📬 Signal Received</h3>
-          <pre>{JSON.stringify(signal, null, 2)}</pre>
-        </div>
-      )}
-    </div>
+    <form onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
+      <input type="file" onChange={e => setImage(e.target.files[0])} />
+      <button type="submit" disabled={loading}>
+        {loading ? 'Analyzing...' : 'Analyze Screenshot'}
+      </button>
+    </form>
   );
 }
