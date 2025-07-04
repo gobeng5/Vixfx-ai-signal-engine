@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { analyzeScreenshot } from '../analysis/screenshot_analysis.js';
 import { detectMarketRegime } from '../utils/market_regime.js';
+import { optimizeStrategies } from '../optimizer/strategy_optimizer.js';
 import Signal from '../models/Signal.js';
 
 const router = express.Router();
@@ -101,6 +102,12 @@ router.get('/stats', async (req, res) => {
     losses,
     winRate: total ? ((wins / total) * 100).toFixed(2) + '%' : '0%'
   });
+});
+
+// Strategy optimizer route
+router.get('/optimize', async (req, res) => {
+  const summary = await optimizeStrategies();
+  res.json(summary);
 });
 
 export default router;
