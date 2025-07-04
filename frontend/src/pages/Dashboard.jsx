@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import UploadForm from '../components/UploadForm';
 import SignalChart from '../components/SignalChart';
 import SignalHistory from '../components/SignalHistory';
+import StatsPanel from '../components/StatsPanel';
 
 export default function Dashboard() {
   const [signals, setSignals] = useState([]);
@@ -15,6 +16,7 @@ export default function Dashboard() {
       <h1 style={{ color: '#1e90ff' }}>📈 VixFx AI Signal Dashboard</h1>
       <UploadForm onSignal={handleNewSignal} />
       {signals.length > 0 && <SignalChart signals={signals} />}
+      <StatsPanel />
       <SignalHistory />
     </div>
   );
