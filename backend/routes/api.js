@@ -5,13 +5,14 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { analyzeScreenshot } from '../analysis/screenshot_analysis.js';
 import { detectMarketRegime } from '../utils/market_regime.js';
+import Signal from '../models/Signal.js';
 
 const router = express.Router();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Multer setup for screenshot uploads
+// Multer setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, '../../uploads')),
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
@@ -23,7 +24,13 @@ router.post('/upload', upload.single('screenshot'), async (req, res) => {
   try {
     const imagePath = req.file.path;
     const result = await analyzeScreenshot(imagePath);
-    res.status(200).json({ success: true, data: result });
+
+    const saved = await Signal.create({
+      type: 'screenshot',
+      ...result
+    });
+
+    res.status(200).json({ success: true, data: saved });
   } catch (err) {
     console.error('❌ Screenshot analysis error:', err);
     res.status(500).json({ success: false, error: 'Analysis failed' });
@@ -61,7 +68,26 @@ router.post('/live', async (req, res) => {
     signal.note += ' — no clear edge, neutral stance';
   }
 
-  res.json({ data: signal });
+  const saved = await Signal.create({
+    type: 'live',
+    ...signal
+  });
+
+  res.json({ data: saved });
+});
+
+// Win/loss stats route
+router.get('/stats', async (req, res) => {
+  const total = await Signal.countDocuments();
+  const wins = await Signal.countDocuments({ result: 'win' });
+  const losses = await Signal.countDocuments({ result: 'loss' });
+
+  res.json({
+    total,
+    wins,
+    losses,
+    winRate: total ? ((wins / total) * 100).toFixed(2) + '%' : '0%'
+  });
 });
 
 export default router;
