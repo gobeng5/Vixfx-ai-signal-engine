@@ -1,10 +1,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/api.js';
-// import connectDB from './db/mongo.js'; // ⛔️ Temporarily disabled
+// import connectDB from './db/mongo.js'; // MongoDB disabled
 
 dotenv.config();
-// connectDB(); // ⛔️ Temporarily disabled
+// connectDB(); // MongoDB disabled
 
 const app = express();
 const PORT = process.env.PORT || 5000;
