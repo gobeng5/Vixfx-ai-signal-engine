@@ -2,10 +2,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  base: '/',
   plugins: [
     react({
-      jsxRuntime: 'classic' // ✅ Forces manual React import
+      jsxRuntime: 'classic'
     })
   ],
-  base: '/',
+  esbuild: {
+    jsxInject: `import React from 'react'`
+  }
 });
