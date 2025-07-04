@@ -1,45 +1,41 @@
 import {
   RSI,
   MACD,
-  BollingerBands,
-  ATR,
   ADX,
-  EMA
+  ATR,
+  BollingerBands
 } from 'technicalindicators';
 
-export function computeIndicators(prices) {
-  const close = prices.map(p => p.close);
-  const high = prices.map(p => p.high);
-  const low = prices.map(p => p.low);
+export function computeIndicators(history) {
+  const closes = history.map(p => p.close);
+  const highs = history.map(p => p.high || p.close); // fallback if high is missing
+  const lows = history.map(p => p.low || p.close);   // fallback if low is missing
 
-  const rsi = RSI.calculate({ values: close, period: 14 }).slice(-1)[0];
-  const macd = MACD.calculate({
-    values: close,
+  const rsi = RSI.calculate({ values: closes, period: 14 }).slice(-1)[0];
+  const atr = ATR.calculate({ high: highs, low: lows, close: closes, period: 14 }).slice(-1)[0];
+  const adx = ADX.calculate({ high: highs, low: lows, close: closes, period: 14 }).slice(-1)[0]?.adx;
+
+  const macdSeries = MACD.calculate({
+    values: closes,
     fastPeriod: 12,
     slowPeriod: 26,
     signalPeriod: 9,
     SimpleMAOscillator: false,
     SimpleMASignal: false
-  }).slice(-1)[0];
+  });
+  const macd = macdSeries.slice(-1)[0];
 
   const bb = BollingerBands.calculate({
     period: 20,
-    values: close,
+    values: closes,
     stdDev: 2
   }).slice(-1)[0];
 
-  const atr = ATR.calculate({ high, low, close, period: 14 }).slice(-1)[0];
-  const adx = ADX.calculate({ high, low, close, period: 14 }).slice(-1)[0];
-  const ema50 = EMA.calculate({ values: close, period: 50 }).slice(-1)[0];
-  const ema200 = EMA.calculate({ values: close, period: 200 }).slice(-1)[0];
-
   return {
     rsi,
-    macd,
-    bb,
     atr,
-    adx: adx?.adx,
-    ema50,
-    ema200
+    adx,
+    macd,
+    bb
   };
 }
