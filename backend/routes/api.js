@@ -47,3 +47,4 @@ router.post('/live', async (req, res) => {
 
   res.json({ data: signal });
 });
+➕ Added live chart analysis route
