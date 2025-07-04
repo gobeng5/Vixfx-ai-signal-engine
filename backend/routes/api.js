@@ -1,7 +1,7 @@
 import express from 'express';
 import { computeIndicators } from '../utils/indicators.js';
-import { detectMarketRegime } from '../utils/regime.js'; // if used
-import Signal from '../models/Signal.js'; // if you're saving to MongoDB
+import { detectMarketRegime } from '../utils/regime.js';
+// import Signal from '../models/Signal.js'; // ⛔️ Temporarily disabled
 
 const router = express.Router();
 
@@ -53,10 +53,8 @@ router.post('/live', async (req, res) => {
     note
   };
 
-  const saved = await Signal.create({
-    type: 'live',
-    ...signal
-  });
+  // const saved = await Signal.create({ type: 'live', ...signal }); // ⛔️ Disabled
+  const saved = { id: 'mock-id', type: 'live', ...signal }; // ✅ Mocked
 
   res.json({ data: saved });
 });
