@@ -1,10 +1,9 @@
-import React from 'react';
-import Dashboard from './pages/Dashboard';
+import SignalForm from './components/SignalForm';
 
 function App() {
   return (
-    <div className="App">
-      <Dashboard />
+    <div className="min-h-screen bg-white text-gray-800">
+      <SignalForm />
     </div>
   );
 }
