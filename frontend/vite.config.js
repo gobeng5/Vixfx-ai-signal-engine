@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [
     react({
-      jsxRuntime: 'classic' // 👈 forces classic runtime to require React import
+      jsxRuntime: 'automatic' // ✅ enables auto-injection of React
     })
   ],
   base: '/',
