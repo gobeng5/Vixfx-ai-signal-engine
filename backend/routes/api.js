@@ -15,6 +15,8 @@ router.post('/live', async (req, res) => {
   const indicators = computeIndicators(history);
   const regime = detectMarketRegime(history.map(p => p.close));
 
+  console.log('📊 Indicators:', indicators);
+
   let direction = 'Neutral';
   let confidence = 60;
   let note = `Market regime: ${regime}`;
