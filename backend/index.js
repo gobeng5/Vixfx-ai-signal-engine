@@ -1,8 +1,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import apiRoutes from './routes/api.js';
+import connectDB from './db/mongo.js';
 
 dotenv.config();
+connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
