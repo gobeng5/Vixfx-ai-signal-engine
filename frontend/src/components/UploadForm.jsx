@@ -1,16 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { connectToDeriv } from '../utils/derivClient';
 
 export default function UploadForm({ onSignal }) {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [useLiveChart, setUseLiveChart] = useState(false);
+  const [livePrice, setLivePrice] = useState(null);
+  const [socket, setSocket] = useState(null);
+
+  useEffect(() => {
+    if (useLiveChart) {
+      const ws = connectToDeriv('R_75'); // Volatility 75 Index
+      setSocket(ws);
+
+      ws.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+        if (data.tick) {
+          setLivePrice(data.tick.quote);
+        }
+      };
+
+      return () => ws.close();
+    } else {
+      if (socket) socket.close();
+    }
+  }, [useLiveChart]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (useLiveChart) {
-      alert('📡 Live chart analysis is coming soon!');
+      if (!livePrice) {
+        alert('Waiting for live price...');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await axios.post('http://localhost:5000/api/live', {
+          symbol: 'R_75',
+          price: livePrice
+        });
+        if (res.data?.data) {
+          onSignal(res.data.data);
+        } else {
+          alert('No signal returned from AI.');
+        }
+      } catch (err) {
+        console.error('Live analysis failed:', err);
+        alert('Live chart analysis failed.');
+      } finally {
+        setLoading(false);
+      }
+
       return;
     }
 
@@ -47,19 +90,23 @@ export default function UploadForm({ onSignal }) {
             checked={useLiveChart}
             onChange={(e) => setUseLiveChart(e.target.checked)}
           />
-          {' '}Use Live Chart Mode (coming soon)
+          {' '}Use Live Chart Mode
         </label>
+        {useLiveChart && livePrice && (
+          <span style={{ marginLeft: '1rem' }}>📡 Live Price: {livePrice}</span>
+        )}
       </div>
 
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImage(e.target.files[0])}
-        disabled={useLiveChart}
-      />
+      {!useLiveChart && (
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setImage(e.target.files[0])}
+        />
+      )}
 
-      <button type="submit" disabled={loading || useLiveChart} style={{ marginLeft: '1rem' }}>
-        {loading ? 'Analyzing...' : 'Analyze Screenshot'}
+      <button type="submit" disabled={loading}>
+        {loading ? 'Analyzing...' : useLiveChart ? 'Analyze Live Data' : 'Analyze Screenshot'}
       </button>
     </form>
   );
