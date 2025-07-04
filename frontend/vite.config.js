@@ -4,17 +4,19 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   base: '/',
+
   plugins: [
     react({
-      // Use automatic JSX transform,
-      // but still force React to be in scope everywhere
-      jsxRuntime: 'automatic'
+      // Force classic JSX runtime so React must be imported
+      jsxRuntime: 'classic',
+
+      // Use Babel to auto-inject `import React` where you forgot it
+      babel: {
+        plugins: ['react-require']
+      }
     })
   ],
-  esbuild: {
-    // Auto‐prepend `import React from 'react'` into every JSX file
-    jsxInject: `import React from 'react'`
-  },
+
   build: {
     outDir: 'dist',
     emptyOutDir: true
