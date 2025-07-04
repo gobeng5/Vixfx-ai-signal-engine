@@ -20,7 +20,7 @@ export default function UploadForm({ onSignal }) {
         if (data.tick) {
           const newPrice = data.tick.quote;
           setLivePrice(newPrice);
-          setPriceHistory(prev => [...prev.slice(-19), newPrice]);
+          setPriceHistory(prev => [...prev.slice(-99), newPrice]);
         }
       };
 
@@ -34,17 +34,24 @@ export default function UploadForm({ onSignal }) {
     e.preventDefault();
 
     if (useLiveChart) {
-      if (!livePrice || priceHistory.length < 10) {
+      if (!livePrice || priceHistory.length < 50) {
         alert('Waiting for enough live data...');
         return;
       }
+
+      const history = priceHistory.map(p => ({
+        open: p,
+        high: p + 1,
+        low: p - 1,
+        close: p
+      }));
 
       setLoading(true);
       try {
         const res = await axios.post('http://localhost:5000/api/live', {
           symbol: 'R_75',
           price: livePrice,
-          history: priceHistory
+          history
         });
         if (res.data?.data) {
           onSignal(res.data.data);
