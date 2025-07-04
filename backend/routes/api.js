@@ -1,7 +1,7 @@
 import express from 'express';
 import { computeIndicators } from '../utils/indicators.js';
 import { detectMarketRegime } from '../utils/regime.js';
-// import Signal from '../models/Signal.js'; // MongoDB disabled for now
+import { sendSignalToTelegram } from '../utils/telegram.js'; // ✅ NEW
 
 const router = express.Router();
 
@@ -14,8 +14,6 @@ router.post('/live', async (req, res) => {
 
   const indicators = computeIndicators(history);
   const regime = detectMarketRegime(history.map(p => p.close));
-
-  console.log('📊 Indicators:', indicators);
 
   let direction = 'Neutral';
   let confidence = 60;
@@ -39,7 +37,6 @@ router.post('/live', async (req, res) => {
     note += ' — Bollinger Band bounce';
   }
 
-  // ✅ Safely compute SL and TPs only if ATR is available
   let sl = 'N/A', tp1 = 'N/A', tp2 = 'N/A', tp3 = 'N/A';
 
   if (indicators.atr) {
@@ -60,8 +57,9 @@ router.post('/live', async (req, res) => {
     note
   };
 
-  // const saved = await Signal.create({ type: 'live', ...signal }); // MongoDB disabled
-  const saved = { id: 'mock-id', type: 'live', ...signal }; // ✅ Mocked response
+  const saved = { id: 'mock-id', type: 'live', ...signal };
+
+  await sendSignalToTelegram(signal); // ✅ Send to Telegram
 
   res.json({ data: saved });
 });
