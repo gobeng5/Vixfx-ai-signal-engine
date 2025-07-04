@@ -1,4 +1,9 @@
+import express from 'express';
 import { computeIndicators } from '../utils/indicators.js';
+import { detectMarketRegime } from '../utils/regime.js'; // if used
+import Signal from '../models/Signal.js'; // if you're saving to MongoDB
+
+const router = express.Router();
 
 router.post('/live', async (req, res) => {
   const { symbol, price, history } = req.body;
@@ -55,3 +60,5 @@ router.post('/live', async (req, res) => {
 
   res.json({ data: saved });
 });
+
+export default router;
