@@ -76,7 +76,20 @@ router.post('/live', async (req, res) => {
   res.json({ data: saved });
 });
 
-// Win/loss stats route
+// Get all signals
+router.get('/signals', async (req, res) => {
+  const signals = await Signal.find().sort({ createdAt: -1 });
+  res.json(signals);
+});
+
+// Update signal result (win/loss)
+router.put('/signals/:id', async (req, res) => {
+  const { result } = req.body;
+  const updated = await Signal.findByIdAndUpdate(req.params.id, { result }, { new: true });
+  res.json(updated);
+});
+
+// Stats route
 router.get('/stats', async (req, res) => {
   const total = await Signal.countDocuments();
   const wins = await Signal.countDocuments({ result: 'win' });
