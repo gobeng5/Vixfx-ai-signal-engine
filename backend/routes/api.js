@@ -1,7 +1,7 @@
 import express from 'express';
 import { computeIndicators } from '../utils/indicators.js';
 import { detectMarketRegime } from '../utils/regime.js';
-// import Signal from '../models/Signal.js'; // ⛔️ Temporarily disabled
+// import Signal from '../models/Signal.js'; // MongoDB disabled for now
 
 const router = express.Router();
 
@@ -37,10 +37,15 @@ router.post('/live', async (req, res) => {
     note += ' — Bollinger Band bounce';
   }
 
-  const sl = (price - indicators.atr * 1.5).toFixed(2);
-  const tp1 = (price + indicators.atr * 1.5).toFixed(2);
-  const tp2 = (price + indicators.atr * 2).toFixed(2);
-  const tp3 = (price + indicators.atr * 3).toFixed(2);
+  // ✅ Safely compute SL and TPs only if ATR is available
+  let sl = 'N/A', tp1 = 'N/A', tp2 = 'N/A', tp3 = 'N/A';
+
+  if (indicators.atr) {
+    sl = (price - indicators.atr * 1.5).toFixed(2);
+    tp1 = (price + indicators.atr * 1.5).toFixed(2);
+    tp2 = (price + indicators.atr * 2).toFixed(2);
+    tp3 = (price + indicators.atr * 3).toFixed(2);
+  }
 
   const signal = {
     direction,
@@ -53,8 +58,8 @@ router.post('/live', async (req, res) => {
     note
   };
 
-  // const saved = await Signal.create({ type: 'live', ...signal }); // ⛔️ Disabled
-  const saved = { id: 'mock-id', type: 'live', ...signal }; // ✅ Mocked
+  // const saved = await Signal.create({ type: 'live', ...signal }); // MongoDB disabled
+  const saved = { id: 'mock-id', type: 'live', ...signal }; // ✅ Mocked response
 
   res.json({ data: saved });
 });
