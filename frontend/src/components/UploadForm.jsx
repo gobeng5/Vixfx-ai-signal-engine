@@ -7,17 +7,20 @@ export default function UploadForm({ onSignal }) {
   const [loading, setLoading] = useState(false);
   const [useLiveChart, setUseLiveChart] = useState(false);
   const [livePrice, setLivePrice] = useState(null);
+  const [priceHistory, setPriceHistory] = useState([]);
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
     if (useLiveChart) {
-      const ws = connectToDeriv('R_75'); // Volatility 75 Index
+      const ws = connectToDeriv('R_75');
       setSocket(ws);
 
       ws.onmessage = (msg) => {
         const data = JSON.parse(msg.data);
         if (data.tick) {
-          setLivePrice(data.tick.quote);
+          const newPrice = data.tick.quote;
+          setLivePrice(newPrice);
+          setPriceHistory(prev => [...prev.slice(-19), newPrice]);
         }
       };
 
@@ -31,8 +34,8 @@ export default function UploadForm({ onSignal }) {
     e.preventDefault();
 
     if (useLiveChart) {
-      if (!livePrice) {
-        alert('Waiting for live price...');
+      if (!livePrice || priceHistory.length < 10) {
+        alert('Waiting for enough live data...');
         return;
       }
 
@@ -40,7 +43,8 @@ export default function UploadForm({ onSignal }) {
       try {
         const res = await axios.post('http://localhost:5000/api/live', {
           symbol: 'R_75',
-          price: livePrice
+          price: livePrice,
+          history: priceHistory
         });
         if (res.data?.data) {
           onSignal(res.data.data);
@@ -93,7 +97,7 @@ export default function UploadForm({ onSignal }) {
           {' '}Use Live Chart Mode
         </label>
         {useLiveChart && livePrice && (
-          <span style={{ marginLeft: '1rem' }}>📡 Live Price: {livePrice}</span>
+          <span style={{ marginLeft: '1rem' }}>📡 Live Price: {livePrice.toFixed(2)}</span>
         )}
       </div>
 
