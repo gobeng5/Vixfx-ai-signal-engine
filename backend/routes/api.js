@@ -30,3 +30,20 @@ router.post('/upload', upload.single('screenshot'), async (req, res) => {
 });
 
 export default router;
+router.post('/live', async (req, res) => {
+  const { symbol, price } = req.body;
+
+  // Placeholder logic — replace with real analysis later
+  const signal = {
+    direction: price % 2 === 0 ? 'Buy' : 'Sell',
+    entry: price.toFixed(2),
+    sl: (price - 5).toFixed(2),
+    tp1: (price + 5).toFixed(2),
+    tp2: (price + 10).toFixed(2),
+    tp3: (price + 15).toFixed(2),
+    confidence: 85,
+    note: `Live signal generated for ${symbol} at price ${price}`
+  };
+
+  res.json({ data: signal });
+});
