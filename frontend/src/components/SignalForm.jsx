@@ -15,11 +15,11 @@ export default function SignalForm() {
 
     try {
       const parsedHistory = JSON.parse(history);
-      const response = await axios.post(
+      const { data } = await axios.post(
         'https://vixfx-ai-signal-engine.onrender.com/api/live',
         { symbol, price: parseFloat(price), history: parsedHistory }
       );
-      setResult(response.data.data);
+      setResult(data.data);
     } catch (err) {
       setResult({ error: err.response?.data?.error || 'Something went wrong' });
     } finally {
@@ -29,7 +29,9 @@ export default function SignalForm() {
 
   return (
     <div className="max-w-xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4 text-center">📡 VixFX Signal Engine</h1>
+      <h1 className="text-2xl font-bold mb-4 text-center">
+        📡 VixFX Signal Engine
+      </h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="text"
@@ -66,10 +68,14 @@ export default function SignalForm() {
       {result && (
         <div className="mt-6 p-4 border rounded bg-gray-50">
           {result.error ? (
-            <p className="text-red-600 font-semibold">❌ {result.error}</p>
+            <p className="text-red-600 font-semibold">
+              ❌ {result.error}
+            </p>
           ) : (
             <>
-              <h2 className="text-lg font-bold mb-2">✅ Signal Generated</h2>
+              <h2 className="text-lg font-bold mb-2">
+                ✅ Signal Generated
+              </h2>
               <p><strong>Direction:</strong> {result.direction}</p>
               <p><strong>Entry:</strong> {result.entry}</p>
               <p><strong>SL:</strong> {result.sl}</p>
