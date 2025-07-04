@@ -15,12 +15,10 @@ export default function SignalForm() {
 
     try {
       const parsedHistory = JSON.parse(history);
-      const response = await axios.post('https://vixfx-ai-signal-engine.onrender.com/api/live', {
-        symbol,
-        price: parseFloat(price),
-        history: parsedHistory
-      });
-
+      const response = await axios.post(
+        'https://vixfx-ai-signal-engine.onrender.com/api/live',
+        { symbol, price: parseFloat(price), history: parsedHistory }
+      );
       setResult(response.data.data);
     } catch (err) {
       setResult({ error: err.response?.data?.error || 'Something went wrong' });
