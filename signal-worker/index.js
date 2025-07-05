@@ -1,97 +1,23 @@
-import WebSocket from 'ws';
-import axios from 'axios';
+import { scoreSignal } from './strategies/scoreSignal.js';
 
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const CHAT_ID = process.env.CHAT_ID;
-const SYMBOLS = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100', 'BOOM1000', 'BOOM500', 'CRASH1000', 'CRASH500'];
+// Inside analyzeAndSend():
+const score = scoreSignal(history);
 
-async function fetchCandles(symbol) {
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
+if (score.total >= 80) {
+  const direction = score.reasons.includes('Uptrend (EMA20 > EMA50)') ? 'buy' : 'sell';
 
-    const timeout = setTimeout(() => {
-      ws.close();
-      reject(new Error(`Timeout while fetching candles for ${symbol}`));
-    }, 10000); // 10 seconds
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({
-        candles: symbol,
-        subscribe: 0,
-        count: 50,
-        granularity: 60
-      }));
-    };
-
-    ws.onmessage = (msg) => {
-      const data = JSON.parse(msg.data);
-      if (data.candles) {
-        clearTimeout(timeout);
-        const candles = data.candles.map(c => ({
-          open: +c.open,
-          high: +c.high,
-          low: +c.low,
-          close: +c.close,
-          volume: +c.volume || 0
-        }));
-        ws.close();
-        resolve(candles);
-      }
-    };
-
-    ws.onerror = (err) => {
-      clearTimeout(timeout);
-      reject(err);
-    };
-  });
-}
-
-
-async function analyzeAndSend(symbol) {
-  try {
-    const history = await fetchCandles(symbol);
-    const price = history[history.length - 1].close;
-
-    const { data } = await axios.post('https://vixfx-ai-signal-engine.onrender.com/api/live', {
-      symbol,
-      price,
-      history
-    });
-
-    const signal = data.data;
-    if (signal && signal.direction && signal.confidence >= 80) {
-      const message = `
+  const message = `
 📡 *VixFX Signal*
 Symbol: ${symbol}
-Direction: ${signal.direction.toUpperCase()}
-Entry: ${signal.entry}
-SL: ${signal.sl}
-TP1: ${signal.tp1}
-TP2: ${signal.tp2}
-TP3: ${signal.tp3}
-Confidence: ${signal.confidence}%
-Note: ${signal.note}
-      `;
+Direction: ${direction.toUpperCase()}
+Entry: ${price}
+SL: ${direction === 'buy' ? price - 100 : price + 100}
+TP1: ${direction === 'buy' ? price + 100 : price - 100}
+TP2: ${direction === 'buy' ? price + 200 : price - 200}
+TP3: ${direction === 'buy' ? price + 300 : price - 300}
+Confidence: ${score.total}%
+Note: ${score.reasons.join(', ')}
+  `;
 
-      await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-        chat_id: CHAT_ID,
-        text: message,
-        parse_mode: 'Markdown'
-      });
-
-      console.log(`✅ Signal sent for ${symbol}`);
-    } else {
-      console.log(`⚠️ No strong signal for ${symbol}`);
-    }
-  } catch (err) {
-    console.error(`❌ Error for ${symbol}:`, err.message);
-  }
+  // Send to Telegram...
 }
-
-async function runAll() {
-  for (const symbol of SYMBOLS) {
-    await analyzeAndSend(symbol);
-  }
-}
-
-runAll(); // ✅ Run once and exit (perfect for GitHub Actions)
