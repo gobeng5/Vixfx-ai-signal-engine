@@ -84,5 +84,4 @@ async function runAll() {
   }
 }
 
-setInterval(runAll, 15 * 60 * 1000);
-runAll();
+runAll(); // ✅ Run once and exit (perfect for GitHub Actions)
