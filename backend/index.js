@@ -1,47 +1,64 @@
 import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
+
 import analyzeAndSend from './analyzeAndSend.js';
 import fetchCandles from './fetchCandles.js';
 import { SYMBOLS } from './symbols.js';
-import signalsRoutes from './routes/signals.js'; // ✅ New line to import route
+import signalsRoutes from './routes/signals.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const CHAT_ID = process.env.CHAT_ID;
+// 🔗 Connect to MongoDB
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch((err) => console.error('❌ MongoDB connection failed:', err));
 
-// ✅ Register /api/signals route
+// 🔌 Register /api/signals route
 app.use('/api/signals', signalsRoutes);
 
-// Manual trigger endpoint
+// 🧠 Manual trigger endpoint
 app.get('/api/run', async (req, res) => {
   console.log('🚀 Manual run initiated via /api/run');
-  await Promise.all(
-    SYMBOLS.map(async symbol => {
-      const history = await fetchCandles(symbol);
-      await analyzeAndSend(symbol, history);
-    })
-  );
-  res.json({ success: true });
-});
-
-// Optional: health check
-app.get('/', (req, res) => {
-  res.send('✅ VixFX Signal Engine is running');
-});
-
-// Auto-run for scheduler
-if (process.env.MODE === 'cron') {
-  (async () => {
-    console.log('⏰ Running signal engine via scheduler');
+  try {
     await Promise.all(
-      SYMBOLS.map(async symbol => {
+      SYMBOLS.map(async (symbol) => {
         const history = await fetchCandles(symbol);
         await analyzeAndSend(symbol, history);
       })
     );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Manual run failed:', err);
+    res.status(500).json({ error: 'Signal engine error' });
+  }
+});
+
+// ❤️ Health check
+app.get('/', (req, res) => {
+  res.send('✅ VixFX Signal Engine is running');
+});
+
+// ⏰ Auto-run when mode is cron
+if (process.env.MODE === 'cron') {
+  (async () => {
+    console.log('⏰ Running signal engine via scheduler');
+    try {
+      await Promise.all(
+        SYMBOLS.map(async (symbol) => {
+          const history = await fetchCandles(symbol);
+          await analyzeAndSend(symbol, history);
+        })
+      );
+    } catch (err) {
+      console.error('❌ Cron job error:', err);
+    }
     process.exit(0);
   })();
 }
