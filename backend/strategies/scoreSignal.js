@@ -1,13 +1,14 @@
 export function scoreSignal(candles) {
   const score = {
     total: 0,
+    direction: null, // 'buy' or 'sell'
     reasons: [],
   };
 
   const last = candles[candles.length - 1];
   const prev = candles[candles.length - 2];
 
-  // === Trend (EMA 20 vs EMA 50) ===
+  // === 1. Trend (EMA 20 vs EMA 50) ===
   const ema = (period) => {
     const k = 2 / (period + 1);
     return candles.reduce((acc, c, i) => {
@@ -21,10 +22,15 @@ export function scoreSignal(candles) {
 
   if (ema20 > ema50) {
     score.total += 25;
+    score.direction = 'buy';
     score.reasons.push('Uptrend (EMA20 > EMA50)');
+  } else if (ema20 < ema50) {
+    score.total += 25;
+    score.direction = 'sell';
+    score.reasons.push('Downtrend (EMA20 < EMA50)');
   }
 
-  // === Momentum (RSI) ===
+  // === 2. Momentum (RSI) ===
   const rsi = (() => {
     let gains = 0, losses = 0;
     for (let i = 1; i < candles.length; i++) {
@@ -36,25 +42,36 @@ export function scoreSignal(candles) {
     return 100 - 100 / (1 + rs);
   })();
 
-  if (rsi > 55) {
+  if (score.direction === 'buy' && rsi > 55) {
     score.total += 20;
     score.reasons.push(`Bullish momentum (RSI ${rsi.toFixed(1)})`);
+  } else if (score.direction === 'sell' && rsi < 45) {
+    score.total += 20;
+    score.reasons.push(`Bearish momentum (RSI ${rsi.toFixed(1)})`);
   }
 
-  // === Price Action (Bullish Engulfing) ===
-  const isBullishEngulfing = (
+  // === 3. Price Action (Engulfing Pattern) ===
+  const isBullishEngulfing =
     prev.close < prev.open &&
     last.close > last.open &&
     last.close > prev.open &&
-    last.open < prev.close
-  );
+    last.open < prev.close;
 
-  if (isBullishEngulfing) {
+  const isBearishEngulfing =
+    prev.close > prev.open &&
+    last.close < last.open &&
+    last.close < prev.open &&
+    last.open > prev.close;
+
+  if (score.direction === 'buy' && isBullishEngulfing) {
     score.total += 25;
     score.reasons.push('Bullish engulfing pattern');
+  } else if (score.direction === 'sell' && isBearishEngulfing) {
+    score.total += 25;
+    score.reasons.push('Bearish engulfing pattern');
   }
 
-  // === Volatility (ATR) ===
+  // === 4. Volatility (ATR Filter) ===
   const atr = candles.reduce((acc, c, i) => {
     if (i === 0) return 0;
     const range = Math.max(
