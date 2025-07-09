@@ -1,8 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import analyzeAndSend from './analyzeAndSend.js';
-import fetchCandles from './fetchCandles.js'; // Modularize WebSocket
+import fetchCandles from './fetchCandles.js';
 import { SYMBOLS } from './symbols.js';
+import signalsRoutes from './routes/signals.js'; // ✅ New line to import route
 
 const app = express();
 app.use(cors());
@@ -10,6 +11,9 @@ app.use(express.json());
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
+
+// ✅ Register /api/signals route
+app.use('/api/signals', signalsRoutes);
 
 // Manual trigger endpoint
 app.get('/api/run', async (req, res) => {
