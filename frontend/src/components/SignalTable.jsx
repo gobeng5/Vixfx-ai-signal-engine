@@ -6,7 +6,7 @@ export default function SignalTable() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('https://your-backend-url.onrender.com/api/signals')
+    axios.get('https://vixfx-ai-signal-engine.onrender.com/api/signals')
       .then(res => {
         setSignals(res.data);
         setLoading(false);
