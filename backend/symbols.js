@@ -1,13 +1,13 @@
-// backend/symbols.js
-
 export const SYMBOLS = [
-  'R_10',
-  'R_25',
-  'R_50',
-  'R_75',
-  'R_100',
-  'BOOM1000',
-  'BOOM500',
-  'CRASH1000',
-  'CRASH500'
+  "Volatility 10 Index",
+  "Volatility 25 Index",
+  "Volatility 50 Index",
+  "Volatility 75 Index",
+  "Volatility 100 Index",
+  "Boom 1000 Index",
+  "Crash 1000 Index",
+  "Boom 500 Index",
+  "Crash 500 Index",
+  "Jump 10 Index",
+  // Add more as needed
 ];
