@@ -5,6 +5,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    proxy: {
+      '/api': {
+        target: 'https://vixfx-ai-signal-engine.onrender.com/', // replace with your actual backend URL
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });
-
