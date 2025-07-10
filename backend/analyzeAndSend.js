@@ -1,43 +1,65 @@
-import axios from 'axios';
-import { scoreSignal } from './strategies/scoreSignal.js';
+// backend/analyzeAndSend.js
 
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const CHAT_ID = process.env.CHAT_ID;
+import { SYMBOLS } from './symbols.js';
+import fetchCandles from './fetchCandles.js';
+import Signal from './models/Signal.js';
 
-async function analyzeAndSend(symbol, history) {
-  try {
-    const price = history[history.length - 1].close;
-    const score = scoreSignal(history);
+export default async function analyzeAndSend(symbol, candles) {
+  if (!candles || candles.length < 2) {
+    console.warn(`⚠️ Not enough data to analyze ${symbol}`);
+    return;
+  }
 
-    if (score.total >= 80) {
-      const direction = score.reasons.includes('Uptrend (EMA20 > EMA50)') ? 'buy' : 'sell';
+  const last = candles[candles.length - 1];
+  const prev = candles[candles.length - 2];
 
-      const message = `
-📡 *VixFX Signal*
-Symbol: ${symbol}
-Direction: ${direction.toUpperCase()}
-Entry: ${price}
-SL: ${direction === 'buy' ? price - 100 : price + 100}
-TP1: ${direction === 'buy' ? price + 100 : price - 100}
-TP2: ${direction === 'buy' ? price + 200 : price - 200}
-TP3: ${direction === 'buy' ? price + 300 : price - 300}
-Confidence: ${score.total}%
-Note: ${score.reasons.join(', ')}
-      `;
+  const direction = last.close > last.open ? 'buy' : 'sell';
+  const spread = Math.abs(last.close - last.open);
+  const volatility = Math.max(last.high - last.low, prev.high - prev.low);
+  const momentum = last.close - prev.close;
 
-      await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-        chat_id: CHAT_ID,
-        text: message,
-        parse_mode: 'Markdown'
-      });
+  let confidence = 50;
+  let notes = [];
 
-      console.log(`✅ Signal sent for ${symbol}`);
-    } else {
-      console.log(`⚠️ No strong signal for ${symbol} (score: ${score.total})`);
-    }
-  } catch (err) {
-    console.error(`❌ Error analyzing ${symbol}:`, err.message);
+  // 📈 Signal scoring logic
+  if (spread > volatility * 0.6) {
+    confidence += 20;
+    notes.push('Strong candle body');
+  }
+
+  if (Math.abs(momentum) > spread * 0.5) {
+    confidence += 15;
+    notes.push('Momentum continuation');
+  }
+
+  if (last.close > last.high || last.close < last.low) {
+    confidence += 10;
+    notes.push('Breakout candle');
+  }
+
+  // 🧠 Optional: Tailored logic per asset class
+  if (symbol.includes('BOOM') || symbol.includes('CRASH')) {
+    notes.push('Synthetic spike-prone asset');
+    confidence += 5;
+  }
+
+  if (confidence >= 80) {
+    const signal = {
+      symbol,
+      direction,
+      confidence,
+      entry: last.close,
+      tp1: direction === 'buy' ? last.close + spread * 1.5 : last.close - spread * 1.5,
+      tp2: direction === 'buy' ? last.close + spread * 2.5 : last.close - spread * 2.5,
+      tp3: direction === 'buy' ? last.close + spread * 4 : last.close - spread * 4,
+      sl: direction === 'buy' ? last.low : last.high,
+      notes,
+      timestamp: new Date()
+    };
+
+    await Signal.create(signal);
+    console.log(`✅ ${symbol} signal saved: ${direction.toUpperCase()} @ ${last.close} [${confidence}%]`);
+  } else {
+    console.log(`🔍 ${symbol} evaluated — no signal triggered (${confidence}%)`);
   }
 }
-
-export default analyzeAndSend;
