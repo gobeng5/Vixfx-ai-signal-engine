@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const SignalSchema = new mongoose.Schema({
   type: String, // 'live' or 'screenshot'
+  symbol: String
   direction: String,
   entry: String,
   sl: String,
