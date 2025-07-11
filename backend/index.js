@@ -20,12 +20,12 @@ mongoose
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => console.error('❌ MongoDB connection failed:', err));
 
-// 🔌 Register /api/signals route
+// 🔌 Signals CRUD route
 app.use('/api/signals', signalsRoutes);
 
-// 🧠 Manual trigger endpoint
+// 🧠 Manual analysis trigger
 app.get('/api/run', async (req, res) => {
-  console.log('🚀 Manual run initiated via /api/run');
+  console.log('🚀 Manual run initiated');
   try {
     await Promise.all(
       SYMBOLS.map(async (symbol) => {
@@ -35,8 +35,30 @@ app.get('/api/run', async (req, res) => {
     );
     res.json({ success: true });
   } catch (err) {
-    console.error('❌ Manual run failed:', err);
+    console.error('❌ Run failed:', err);
     res.status(500).json({ error: 'Signal engine error' });
+  }
+});
+
+// 📊 Stats endpoint for frontend
+app.get('/api/stats', async (req, res) => {
+  try {
+    const Signal = (await import('./models/Signal.js')).default;
+    const total = await Signal.countDocuments();
+    const hits = await Signal.countDocuments({ confidence: { $gte: 80 } });
+
+    const confidenceAvg = await Signal.aggregate([
+      { $group: { _id: null, avg: { $avg: '$confidence' } } }
+    ]);
+
+    res.json({
+      total,
+      hits,
+      confidence: Math.round(confidenceAvg[0]?.avg || 0)
+    });
+  } catch (err) {
+    console.error('❌ Stats error:', err);
+    res.status(500).json({ error: 'Stats generation failed' });
   }
 });
 
@@ -45,10 +67,10 @@ app.get('/', (req, res) => {
   res.send('✅ VixFX Signal Engine is running');
 });
 
-// ⏰ Auto-run when mode is cron
+// ⏰ Auto-run via cron mode
 if (process.env.MODE === 'cron') {
   (async () => {
-    console.log('⏰ Running signal engine via scheduler');
+    console.log('⏰ Cron-triggered signal engine start');
     try {
       await Promise.all(
         SYMBOLS.map(async (symbol) => {
@@ -57,7 +79,7 @@ if (process.env.MODE === 'cron') {
         })
       );
     } catch (err) {
-      console.error('❌ Cron job error:', err);
+      console.error('❌ Cron error:', err);
     }
     process.exit(0);
   })();
@@ -65,5 +87,5 @@ if (process.env.MODE === 'cron') {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ VixFX Signal Engine listening on port ${PORT}`);
+  console.log(`✅ VixFX backend running on port ${PORT}`);
 });
