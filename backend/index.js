@@ -13,8 +13,7 @@ const app = express();
 const allowedOrigins = ['https://vixfx-ai-signal-engine-1.onrender.com'];
 app.use(cors({
   origin: allowedOrigins,
-  methods: ['GET', 'POST'],
-  credentials: true,
+  methods: ['GET'],
 }));
 
 app.use(express.json());
