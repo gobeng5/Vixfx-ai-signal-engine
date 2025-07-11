@@ -58,12 +58,14 @@ app.get('/api/stats', async (req, res) => {
 app.get('/api/stats/winrate', async (req, res) => {
   try {
     const Signal = (await import('./models/Signal.js')).default;
-    const total = await Signal.countDocuments();
-    const wins = await Signal.countDocuments({ tpHit: true });
+    const total = await Signal.countDocuments({ result: { $ne: 'pending' } });
+    const wins = await Signal.countDocuments({ result: 'win' });
     const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
     res.json({ total, wins, winrate });
   } catch (err) {
-    res.status(500).json({ error: 'Winrate failed' });
+    console.error('❌ Winrate error:', err);
+    res.status(500).json({ error: 'Winrate calculation failed' });
   }
 });
 
@@ -94,13 +96,15 @@ app.get('/api/export', async (req, res) => {
   try {
     const Signal = (await import('./models/Signal.js')).default;
     const signals = await Signal.find().lean();
-    const fields = ['symbol', 'confidence', 'tpHit', 'timestamp'];
+    const fields = ['type', 'direction', 'entry', 'sl', 'tp1', 'tp2', 'tp3', 'confidence', 'note', 'result', 'createdAt'];
     const parser = new Parser({ fields });
     const csv = parser.parse(signals);
+
     res.header('Content-Type', 'text/csv');
     res.attachment('signals.csv');
     res.send(csv);
   } catch (err) {
+    console.error('❌ Export error:', err);
     res.status(500).send('CSV export failed');
   }
 });
