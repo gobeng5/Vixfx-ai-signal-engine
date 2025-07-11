@@ -1,90 +1,123 @@
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
-
 import analyzeAndSend from './analyzeAndSend.js';
 import fetchCandles from './fetchCandles.js';
 import { SYMBOLS } from './symbols.js';
 import signalsRoutes from './routes/signals.js';
+import { Parser } from 'json2csv'; // ← for CSV export
 
 const app = express();
 
-// ✅ CORS: Allow frontend to access backend from Render
 const allowedOrigins = ['https://vixfx-ai-signal-engine-1.onrender.com'];
-app.use(cors({
-  origin: allowedOrigins,
-  methods: ['GET'],
-}));
-
+app.use(cors({ origin: allowedOrigins, methods: ['GET'], credentials: true }));
 app.use(express.json());
 
-// 🔗 Connect to MongoDB
-mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch((err) => console.error('❌ MongoDB connection failed:', err));
+// 🔌 MongoDB connection
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true, useUnifiedTopology: true,
+})
+.then(() => console.log('✅ MongoDB connected'))
+.catch(err => console.error('❌ MongoDB error:', err));
 
-// 📦 CRUD routes for signals
 app.use('/api/signals', signalsRoutes);
 
-// 🧠 Trigger signal analysis manually
+// 🧠 Manual run trigger
 app.get('/api/run', async (req, res) => {
-  console.log('🚀 Manual signal run triggered');
   try {
-    await Promise.all(
-      SYMBOLS.map(async (symbol) => {
-        const history = await fetchCandles(symbol);
-        await analyzeAndSend(symbol, history);
-      })
-    );
+    await Promise.all(SYMBOLS.map(async symbol => {
+      const history = await fetchCandles(symbol);
+      await analyzeAndSend(symbol, history);
+    }));
     res.json({ success: true });
   } catch (err) {
-    console.error('❌ Run error:', err);
-    res.status(500).json({ error: 'Signal engine error' });
+    res.status(500).json({ error: 'Manual run failed' });
   }
 });
 
-// 📊 Dashboard stats endpoint
+// 📊 General stats
 app.get('/api/stats', async (req, res) => {
   try {
     const Signal = (await import('./models/Signal.js')).default;
     const total = await Signal.countDocuments();
     const hits = await Signal.countDocuments({ confidence: { $gte: 80 } });
-
     const confidenceAvg = await Signal.aggregate([
-      { $group: { _id: null, avg: { $avg: '$confidence' } } }
+      { $group: { _id: null, avg: { $avg: '$confidence' } } },
     ]);
-
     res.json({
       total,
       hits,
       confidence: Math.round(confidenceAvg[0]?.avg || 0)
     });
   } catch (err) {
-    console.error('❌ Stats error:', err);
-    res.status(500).json({ error: 'Stats generation failed' });
+    res.status(500).json({ error: 'Stats failed' });
   }
 });
 
-// 🫀 Health check
-app.get('/', (req, res) => {
-  res.send('✅ VixFX Signal Engine is active');
+// 📊 Winrate stats
+app.get('/api/stats/winrate', async (req, res) => {
+  try {
+    const Signal = (await import('./models/Signal.js')).default;
+    const total = await Signal.countDocuments();
+    const wins = await Signal.countDocuments({ tpHit: true });
+    const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+    res.json({ total, wins, winrate });
+  } catch (err) {
+    res.status(500).json({ error: 'Winrate failed' });
+  }
 });
 
-// ⏰ Auto-trigger analysis in cron mode
+// 📊 Symbol-specific stats
+app.get('/api/stats/:symbol', async (req, res) => {
+  try {
+    const Signal = (await import('./models/Signal.js')).default;
+    const { symbol } = req.params;
+    const total = await Signal.countDocuments({ symbol });
+    const hits = await Signal.countDocuments({ symbol, confidence: { $gte: 80 } });
+    const confidenceAvg = await Signal.aggregate([
+      { $match: { symbol } },
+      { $group: { _id: null, avg: { $avg: '$confidence' } } },
+    ]);
+    res.json({
+      symbol,
+      total,
+      hits,
+      confidence: Math.round(confidenceAvg[0]?.avg || 0)
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Symbol stats failed' });
+  }
+});
+
+// 📤 CSV export
+app.get('/api/export', async (req, res) => {
+  try {
+    const Signal = (await import('./models/Signal.js')).default;
+    const signals = await Signal.find().lean();
+    const fields = ['symbol', 'confidence', 'tpHit', 'timestamp'];
+    const parser = new Parser({ fields });
+    const csv = parser.parse(signals);
+    res.header('Content-Type', 'text/csv');
+    res.attachment('signals.csv');
+    res.send(csv);
+  } catch (err) {
+    res.status(500).send('CSV export failed');
+  }
+});
+
+// ❤️ Health check
+app.get('/', (req, res) => {
+  res.send('✅ Backend running');
+});
+
+// ⏰ Cron mode
 if (process.env.MODE === 'cron') {
   (async () => {
-    console.log('⏰ Cron-triggered signal engine start');
     try {
-      await Promise.all(
-        SYMBOLS.map(async (symbol) => {
-          const history = await fetchCandles(symbol);
-          await analyzeAndSend(symbol, history);
-        })
-      );
+      await Promise.all(SYMBOLS.map(async symbol => {
+        const history = await fetchCandles(symbol);
+        await analyzeAndSend(symbol, history);
+      }));
     } catch (err) {
       console.error('❌ Cron error:', err);
     }
@@ -93,6 +126,4 @@ if (process.env.MODE === 'cron') {
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ VixFX backend listening on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Backend listening on port ${PORT}`));
