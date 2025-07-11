@@ -8,7 +8,15 @@ import { SYMBOLS } from './symbols.js';
 import signalsRoutes from './routes/signals.js';
 
 const app = express();
-app.use(cors());
+
+// ✅ CORS: Allow frontend to access backend from Render
+const allowedOrigins = ['https://vixfx-ai-signal-engine-1.onrender.com'];
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST'],
+  credentials: true,
+}));
+
 app.use(express.json());
 
 // 🔗 Connect to MongoDB
@@ -20,12 +28,12 @@ mongoose
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => console.error('❌ MongoDB connection failed:', err));
 
-// 🔌 Signals CRUD route
+// 📦 CRUD routes for signals
 app.use('/api/signals', signalsRoutes);
 
-// 🧠 Manual analysis trigger
+// 🧠 Trigger signal analysis manually
 app.get('/api/run', async (req, res) => {
-  console.log('🚀 Manual run initiated');
+  console.log('🚀 Manual signal run triggered');
   try {
     await Promise.all(
       SYMBOLS.map(async (symbol) => {
@@ -35,12 +43,12 @@ app.get('/api/run', async (req, res) => {
     );
     res.json({ success: true });
   } catch (err) {
-    console.error('❌ Run failed:', err);
+    console.error('❌ Run error:', err);
     res.status(500).json({ error: 'Signal engine error' });
   }
 });
 
-// 📊 Stats endpoint for frontend
+// 📊 Dashboard stats endpoint
 app.get('/api/stats', async (req, res) => {
   try {
     const Signal = (await import('./models/Signal.js')).default;
@@ -62,12 +70,12 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// ❤️ Health check
+// 🫀 Health check
 app.get('/', (req, res) => {
-  res.send('✅ VixFX Signal Engine is running');
+  res.send('✅ VixFX Signal Engine is active');
 });
 
-// ⏰ Auto-run via cron mode
+// ⏰ Auto-trigger analysis in cron mode
 if (process.env.MODE === 'cron') {
   (async () => {
     console.log('⏰ Cron-triggered signal engine start');
@@ -87,5 +95,5 @@ if (process.env.MODE === 'cron') {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ VixFX backend running on port ${PORT}`);
+  console.log(`✅ VixFX backend listening on port ${PORT}`);
 });
