@@ -1,18 +1,19 @@
 import mongoose from 'mongoose';
 
 const SignalSchema = new mongoose.Schema({
-  type: String, // 'live' or 'screenshot'
-  symbol: String
-  direction: String,
-  entry: String,
-  sl: String,
-  tp1: String,
-  tp2: String,
-  tp3: String,
-  confidence: Number,
-  note: String,
+  type: { type: String },          // 'live' or 'screenshot'
+  direction: { type: String },     // 'buy' or 'sell'
+  entry: { type: String },
+  sl: { type: String },
+  tp1: { type: String },
+  tp2: { type: String },
+  tp3: { type: String },
+  confidence: { type: Number },
+  note: { type: String },
   result: { type: String, default: 'pending' }, // 'win', 'loss', 'pending'
+  symbol: { type: String },        // used for stats filtering
   createdAt: { type: Date, default: Date.now }
 });
 
-export default mongoose.model('Signal', SignalSchema);
+const SignalModel = mongoose.model('Signal', SignalSchema);
+export default SignalModel;
