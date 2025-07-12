@@ -9,8 +9,14 @@ import { Parser } from 'json2csv'; // ← for CSV export
 
 const app = express();
 
-const allowedOrigins = ['https://vixfx-ai-signal-engine-1.onrender.com'];
-app.use(cors({ origin: allowedOrigins, methods: ['GET'], credentials: true }));
+const allowedOrigins = ['https://vixfx-ai-signal-engine-1.onrender.com']; // Your frontend domain
+
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST'],
+  credentials: true,
+}));
+
 app.use(express.json());
 
 // 🔌 MongoDB connection
